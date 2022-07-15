@@ -16,7 +16,7 @@ export async function generateMerkleRoot(
   saveToFile?: boolean,
   withProofs?: boolean
 ) {
-  const allocationPath: string = join(__dirname, allocationFilename);
+  const allocationPath: string = join(__dirname, `../${allocationFilename}`);
 
   // Check if config exists
   if (!existsSync(allocationPath)) {
