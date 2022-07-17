@@ -14,7 +14,9 @@ export function throwErrorAndExit(error: string): void {
 export async function generateMerkleRoot(
   allocationFilename: string = "../migrators-records.json",
   saveToFile?: boolean,
-  withProofs?: boolean
+  withProofs?: boolean,
+  start: number = 0,
+  stop: number = 0
 ) {
   const allocationPath: string = join(__dirname, `../${allocationFilename}`);
 
@@ -33,7 +35,7 @@ export async function generateMerkleRoot(
   const generator = new Generator(airdropRecords);
   const merkleRoot = generator.process(saveToFile);
   if (withProofs) {
-    generator.generateClaims(saveToFile);
+    generator.generateClaims(start, stop, saveToFile);
   }
   return merkleRoot;
 }

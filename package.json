@@ -8,7 +8,7 @@
     "test": "npx hardhat test",
     "prepublishOnly": "npm run test",
     "start": "ts-node src/app.ts",
-    "generate-with-proofs": "GENERATE_PROOFS=true ts-node src/app.ts"
+    "startVesting": "ts-node src/appVesting.ts"
   },
   "author": "Anish Agnihotri, noobshow & ItsShadowl",
   "license": "AGPL-3.0-only",

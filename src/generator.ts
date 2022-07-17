@@ -1,4 +1,4 @@
-import fs from "fs"; // Filesystem
+import fs, { existsSync } from "fs"; // Filesystem
 import path from "path"; // Path
 import keccak256 from "keccak256"; // Keccak256 hashing
 import MerkleTree from "merkletreejs"; // MerkleTree.js
@@ -33,6 +33,7 @@ type AirdropRecipient = {
 
 export default class Generator {
   tree: MerkleTree;
+  tokenTotal: BigNumber;
   recipients: AirdropRecipient[] = []; // Airdrop recipients
   leaves: { [account: string]: Buffer } = {};
 
@@ -45,6 +46,9 @@ export default class Generator {
     airdrop: Record<string, BigNumberish> = {},
     decimals: number = 18
   ) {
+    console.log("Reading records");
+
+    this.tokenTotal = BigNumber.from(0);
     // For each airdrop entry
     for (const [tmpAddress, tokens] of Object.entries(airdrop)) {
       // Checksum address
@@ -62,6 +66,7 @@ export default class Generator {
 
       // Generate leafs
       this.leaves[address] = this.generateLeaf(address, value);
+      this.tokenTotal = this.tokenTotal.add(value);
     }
 
     logger.info("Generating Merkle tree.");
@@ -109,7 +114,7 @@ export default class Generator {
         // Root + full tree
         JSON.stringify({
           root: merkleRoot,
-          tree: this.tree
+          tokenTotal: this.tokenTotal.toHexString()
         })
       );
       logger.info(
@@ -120,55 +125,79 @@ export default class Generator {
   }
 
   generateClaims(
+    start: number = 0,
+    stop: number = 0,
     saveToFile: boolean = false,
-    claimsOutFilename: string = "../claims.json"
+    claimsOutFilename: string = "../claims/claims"
   ) {
     const claimsOutputPath: string = path.join(__dirname, claimsOutFilename);
     logger.info(
       "Generating readable proofs for each claims... Might take a while..."
     );
 
-    const claims: IClaims = {};
+    let claims: IClaims = {};
     console.time("getHexProof");
+    let startIndex = Math.max(0, start);
+    let stopIndex =
+      stop === 0
+        ? this.recipients.length
+        : Math.min(this.recipients.length, stop);
 
-    this.recipients.forEach(({ address, value }, index) => {
+    for (let index = startIndex; index < stopIndex; index++) {
+      const { address, value } = this.recipients[index];
+
       claims[address] = {
         amount: value,
         proof: this.tree.getHexProof(this.leaves[address])
       };
-      if (index > 1 && index % 100 == 0) {
+
+      if (index > 1 && index % 10 == 0) {
         console.log("Index :", index);
+        console.timeEnd("loop");
+
+        if (saveToFile) {
+          let existingClaims: IClaims = {};
+
+          if (index % 100 == 0) {
+            startIndex = index;
+          }
+
+          const currClaimsOutputPath = `${claimsOutputPath}-${startIndex}.json`;
+          if (existsSync(currClaimsOutputPath)) {
+            existingClaims = JSON.parse(
+              fs.readFileSync(currClaimsOutputPath, "utf-8")
+            );
+          }
+
+          const newClaims: IClaims = { ...existingClaims, ...claims };
+
+          // Collect and save merkle tree + root
+          fs.writeFileSync(
+            // Output to claims.json
+            currClaimsOutputPath,
+            // Claims and Proofs in string formats
+            JSON.stringify(newClaims)
+          );
+          //clear claims
+          claims = {};
+        }
+        console.time("loop");
       }
-    });
+    }
 
     console.timeEnd("getHexProof");
 
-    const tokenTotal: BigNumber = this.recipients
-      .map((a) => a.value)
-      .reduce<BigNumber>((a, b) => a.add(b), BigNumber.from(0));
+    // const jsonOutput: IMerkleDistributorInfo = {
+    //   claims: claims
+    // };
 
-    const jsonOutput: IMerkleDistributorInfo = {
-      merkleRoot: this.tree.getHexRoot(),
-      tokenTotal: tokenTotal.toHexString(),
-      claims: claims
-    };
-
-    if (saveToFile) {
-      // Collect and save merkle tree + root
-      fs.writeFileSync(
-        // Output to claims.json
-        claimsOutputPath,
-        // Claims and Proofs in string formats
-        JSON.stringify(jsonOutput)
-      );
-      logger.info(
-        `Generated readable proofs for each claims to ${claimsOutputPath}.`
-      );
-    }
+    logger.info(
+      `Generated readable proofs for each claims to ${claimsOutputPath}.`
+    );
 
     return {
       merkleRoot: this.tree.getHexRoot(),
-      tokenTotal: tokenTotal.toHexString(),
+      tokenTotal: this.tokenTotal.toHexString(),
       claims
     };
   }

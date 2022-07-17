@@ -1,8 +1,12 @@
 import { generateMerkleRoot } from "./utils/helpers";
 
-// env & Config file path
-const generateProofs = process.env.GENERATE_PROOFS === "true" || false;
-
 (async () => {
-  await generateMerkleRoot("../vesting-records", true, generateProofs);
+  // To trim first 2 elements
+  const arg = process.argv.slice(2);
+
+  const withProofs = arg[0] === "true" || false;
+  const start = Number(arg[1] || 0);
+  const stop = Number(arg[2] || 0);
+
+  await generateMerkleRoot("../vesting-records", true, withProofs, start, stop);
 })();
