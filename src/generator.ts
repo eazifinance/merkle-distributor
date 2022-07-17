@@ -151,14 +151,13 @@ export default class Generator {
         proof: this.tree.getHexProof(this.leaves[address])
       };
 
-      if (index > 1 && index % 10 == 0) {
+      if ((index > 1 && index % 100 == 0) || index >= stopIndex - 1) {
         console.log("Index :", index);
-        console.timeEnd("loop");
 
         if (saveToFile) {
           let existingClaims: IClaims = {};
 
-          if (index % 100 == 0) {
+          if (index % 2000 == 0) {
             startIndex = index;
           }
 
@@ -181,16 +180,10 @@ export default class Generator {
           //clear claims
           claims = {};
         }
-        console.time("loop");
       }
     }
 
     console.timeEnd("getHexProof");
-
-    // const jsonOutput: IMerkleDistributorInfo = {
-    //   claims: claims
-    // };
-
     logger.info(
       `Generated readable proofs for each claims to ${claimsOutputPath}.`
     );
