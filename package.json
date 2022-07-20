@@ -8,6 +8,7 @@
     "test": "npx hardhat test",
     "prepublishOnly": "npm run test",
     "start": "ts-node src/app.ts",
+    "split": "ts-node src/split.ts",
     "startVesting": "ts-node src/appVesting.ts"
   },
   "author": "Anish Agnihotri, noobshow & ItsShadowl",
